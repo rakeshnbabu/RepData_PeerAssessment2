@@ -1,7 +1,61 @@
 Title
 ========================================================
 # Synopsis
+This analysis answers the questions, "Across the United States, which types of weather events are most harmful with respect to population health?"; and "Across the United States, which types of events have the greatest economic consequences?". Harm with respect to population health is summarized by both number of injuries and number of fatalaties per calendar year. Economic consequences are summarized by the sum total of all damages per calendar year. 
+
+# Requirements
+This analysis depends on the following packages. If these are not present on 
+your current R installation, please install them.
+```{r}
+library(ggplot2)
+library(plyr)
+```
 # Data Processing
+The raw data are available in bzip2 format at `https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2`. This analysis assumes the data are already decompressed and located in the current working directory under the name `repdata%2Fdata%2FStormData.csv`. The data are then read in:
+```{r cache=TRUE}
+# Be patient; this may take a couple of minutes
+stormData <- read.csv("testData.csv")
+```
+We transform the data to ensure that they are of types conducive to our analysis
+```{r, cache=TRUE}
+stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, format = "%m/%d/%Y %H:%M:%S")
+
+```
+Next, two summary data frames are generated, one which evaluates damage to population health, and one which evaluates economic damages. These data are transformed to represent the total damage due to each type of event for each calendar year.
+```{r}
+# create the health data frame
+phData <- ddply(mutate(stormData, year=format(stormData$BGN_DATE, "%Y")), 
+                c("EVTYPE", "year"),
+                function(df) cbind(fatalities = sum(df$FATALITIES),
+                                   injuries = sum(df$INJURIES)))
+
+```
+The econ data frame is a little trickier, due to the way the data is encoded. The data are stored as a 3-digit number followed by an order of magnitude: either "K" for thousands, "M" for Millions, or "B" for Billions of dollars. To convert any pair of numbers and magnitudes to a single numeric, we use the following vectorized wrapper function:
+```{r}
+DmgMult <- function(x, mag) {
+  x <- as.numeric(x)
+  mag <- switch(as.character(mag),
+                K = 10**3,
+                M = 10**6,
+                B = 10**9,
+                0)
+  x * mag
+}
+vDmgMult <- Vectorize(DmgMult)
+```
+Using vDmgMult, we can now create the econ data frame.
+```{r}
+econData <- ddply(mutate(stormData, year=format(stormData$BGN_DATE, "%Y")), 
+                c("EVTYPE", "year"), 
+                function(df) cbind(damages=sum(
+                                            vDmgMult(df$PROPDMG, df$PROPDMGEXP) +
+                                            vDmgMult(df$CROPDMG, df$CROPDMGEXP))))
+
+
+```
+
+Finally, the data are further condensed; the ten most harmful weather events in each of the summary data frames are retained, and damages from all other events are summed to create an "other" category.
 
 # Results
+
 # Discussion
