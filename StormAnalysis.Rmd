@@ -12,18 +12,18 @@ library(plyr)
 library(scales)
 ```
 # Data Processing
-The raw data are available in bzip2 format at `https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2`. This analysis assumes the data are already decompressed and located in the current working directory under the name `repdata%2Fdata%2FStormData.csv`. The data are then read in:
+The raw data are available in bzip2 format at `https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2`. This analysis assumes the data are already downloaded and located in the current working directory under the name `repdata%2Fdata%2FStormData.csv.bz2`. The data are then read in:
 ```{r, cache=TRUE}
 # Be patient; this may take a couple of minutes
 
 stormData <- read.csv(bzfile("./repdata%2Fdata%2FStormData.csv.bz2"))
 ```
-We transform the data to ensure that they are of types conducive to our analysis
+We transform the data to ensure that they are of types conducive to our analysis; this means converting the `BGN_DATE` value to a Date object, and adding a `year` column for aggregating the data.
 ```{r, cache=TRUE}
 stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, format = "%m/%d/%Y %H:%M:%S")
 stormData <- mutate(stormData, year=format(stormData$BGN_DATE, "%Y"))
 ```
-Next, two summary data frames are generated, one which evaluates damage to population health, and one which evaluates economic damages. These data are transformed to represent the total damage due to each type of event for each calendar year.
+Next, a data frame is created which analyzes information related only to public health. These data are transformed for further analysis by grouping the observations by event type and year, and taking the sum of all fatalities and injuries.
 ```{r, cache=TRUE}
 # create the health data frame
 phData <- ddply(stormData, 
@@ -45,7 +45,7 @@ DmgMult <- function(x, mag) {
 }
 vDmgMult <- Vectorize(DmgMult)
 ```
-Using vDmgMult, we can now create the econ data frame.
+Using vDmgMult, we can now create the econ data frame, performing the same manipulations as on the public health data frame.
 ```{r, cache=TRUE}
 econData <- ddply(stormData, 
                 c("EVTYPE", "year"), 
